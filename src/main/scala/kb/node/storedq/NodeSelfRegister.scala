@@ -27,9 +27,8 @@ object NodeSelfRegister {
     case "" => InetAddress.getLocalHost.getHostName
   }
 
-  def loadConfig(): Config = {
+  def loadConfig(config: Config): Config = {
 
-    val config = ConfigFactory.load()
     val storedqPart = config.getConfig("storedq")
     val clusterName = storedqPart.getString("cluster-name")
     val seedPort = storedqPart.getString("seed-port")

@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: storedq
+  labels:
+    name: storedq
+spec:
+  replicas: 1
+  selector:
+    name: storedq
+  template:
+    metadata:
+      name: storedq
+      labels:
+        name: storedq
+    spec:
+      containers:
+      - name: storedq
+        image: 127.0.0.1:5000/inu/storedq:1.0.9
+        ports:
+        - containerPort: 2551
+        env:
+          - name: PEER_DISCOVERY_SERVICE
+            value: storedq-peers
+          - name: CASSANDRA_DISCOVERY_SERVICE
+            value: cassandra
