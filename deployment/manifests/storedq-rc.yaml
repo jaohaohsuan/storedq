@@ -20,7 +20,9 @@ spec:
         ports:
         - containerPort: 2551
         env:
+          - name: IFAC
+            value: eth0
           - name: PEER_DISCOVERY_SERVICE
             value: storedq-peers
-          - name: CASSANDRA_DISCOVERY_SERVICE
+          - name: AKKA_PERSISTENCE_SERVICE
             value: cassandra

@@ -1,8 +1,5 @@
-import java.text.SimpleDateFormat
-
 import com.typesafe.sbt.packager.docker._
 import sbt.Keys._
-import java.util.Calendar
 
 lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging, DockerPlugin).settings(
   name := "storedq",
@@ -32,7 +29,7 @@ lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging, DockerPlu
   packageName in Docker := "storedq",
   dockerCommands := Seq(
     Cmd("FROM", "java:latest"),
-    Cmd("ENV", "REFRESHED_AT", new SimpleDateFormat("yyyy-MM-dd").format(Calendar.getInstance().getTime())),
+    Cmd("ENV", "REFRESHED_AT", "2016-04-08"),
     Cmd("RUN", "apt-get update && apt-get install -y apt-utils dnsutils && apt-get clean && rm -rf /var/lib/apt/lists/*"),
     Cmd("WORKDIR", "/opt/docker"),
     Cmd("ADD", "opt", "/opt"),
@@ -61,5 +58,6 @@ lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging, DockerPlu
                               |}
                               |
                               |format $PEER_DISCOVERY_SERVICE SEED_NODES
+                              |format $AKKA_PERSISTENCE_SERVICE CASSANDRA_NODES
                               |""".stripMargin
 )
