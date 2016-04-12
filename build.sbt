@@ -15,7 +15,11 @@ lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging, DockerPlu
   libraryDependencies ++= {
     val akkaVersion = "2.4.2"
     Seq(
+      "io.circe" %% "circe-core" % "0.3.0",
+      "io.circe" %% "circe-generic" % "0.3.0",
+      "io.circe" %% "circe-parser" % "0.3.0",
       "ch.qos.logback" % "logback-classic" % "1.1.3",
+      "com.github.romix.akka" %% "akka-kryo-serialization" % "0.4.1",
       "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
       "com.typesafe.akka" %% "akka-cluster" % akkaVersion,
       "com.typesafe.akka" %% "akka-cluster-metrics" % akkaVersion,
