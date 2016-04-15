@@ -7,6 +7,10 @@ import com.esotericsoftware.kryo.Kryo
   */
 class KryoInit {
   def customize(kryo: Kryo): Unit  = {
-
+    kryo.register(classOf[domain.StoredQuery])
+    kryo.register(classOf[domain.NamedBoolClause])
+    kryo.register(classOf[domain.MatchBoolClause])
+    kryo.register(classOf[domain.ItemCreated])
+    kryo.register(classOf[domain.ItemsChanged])
   }
 }

@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: storedq
-        image: 127.0.0.1:5000/inu/storedq:1.0.9
+        image: 127.0.0.1:5000/inu/storedq:1.0.10
         ports:
         - containerPort: 2551
         env:

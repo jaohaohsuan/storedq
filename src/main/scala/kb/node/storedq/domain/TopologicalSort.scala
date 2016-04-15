@@ -1,4 +1,4 @@
-package kb.node.storedq
+package kb.node.storedq.domain
 
 import scala.annotation.tailrec
 
@@ -16,9 +16,7 @@ object TopologicalSort {
       if (noPreds.isEmpty) {
         if (hasPreds.isEmpty) done else sys.error(hasPreds.toString)
       } else {
-        val found = noPreds.map {
-          _._1
-        }
+        val found = noPreds.keys
         sort(hasPreds.mapValues {
           _ -- found
         }, done ++ found)

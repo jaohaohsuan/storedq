@@ -3,28 +3,31 @@ import sbt.Keys._
 
 lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging, DockerPlugin).settings(
   name := "storedq",
-
-  version := "1.0.9",
-
-  scalaVersion := "2.11.6",
-
-  scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
-
+  version := "1.0.10",
+  scalaVersion := "2.11.8",
+  scalacOptions in ThisBuild ++= Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
   evictionWarningOptions in update := EvictionWarningOptions.empty,
-
   libraryDependencies ++= {
-    val akkaVersion = "2.4.2"
+    val akkaVersion = "2.4.3"
     Seq(
       "io.circe" %% "circe-core" % "0.3.0",
       "io.circe" %% "circe-generic" % "0.3.0",
       "io.circe" %% "circe-parser" % "0.3.0",
       "ch.qos.logback" % "logback-classic" % "1.1.3",
       "com.github.romix.akka" %% "akka-kryo-serialization" % "0.4.1",
+      "com.typesafe.akka" %% "akka-http-core" % akkaVersion,
+      "com.typesafe.akka" %% "akka-http-experimental" % akkaVersion,
+      "com.typesafe.akka" %% "akka-http-spray-json-experimental" % akkaVersion,
+      "com.typesafe.akka" %% "akka-http-xml-experimental" % akkaVersion,
       "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
       "com.typesafe.akka" %% "akka-cluster" % akkaVersion,
       "com.typesafe.akka" %% "akka-cluster-metrics" % akkaVersion,
       "com.typesafe.akka" %% "akka-persistence" % akkaVersion,
+      "com.typesafe.akka" %% "akka-persistence-query-experimental" % akkaVersion,
       "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.11",
+      //"com.propensive" %% "rapture-json-circe" % "2.0.0-M5",
+      "org.json4s" %% "json4s-native" % "3.3.0",
+
       "org.scalatra.scalate" %% "scalate-core" % "1.7.1",
       "org.scalatest" %% "scalatest" % "2.2.6" % "test"
     )

@@ -1,6 +1,6 @@
 package kb.node.storedq
 
-import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
+import com.typesafe.config.{Config, ConfigFactory}
 
 /**
   * Created by henry on 4/7/16.
