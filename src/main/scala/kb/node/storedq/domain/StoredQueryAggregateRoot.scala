@@ -32,11 +32,11 @@ case class UpdateStoredQuery(storedQueryId: String, title: String, tags: Option[
 
 // events
 case class ItemCreated(entity: StoredQuery, dependencies: Map[(String, String), Int]) extends Event
-case class ItemsChanged(items: Seq[(String, StoredQuery)], changes: List[String], dependencies: Map[(String, String), Int]) extends Event
+case class ItemsChanged(items: Seq[(String, StoredQuery)], changes: Map[String, Long], dependencies: Map[(String, String), Int]) extends Event
 
 // state
 case class StoredQueries(items: Map[String, StoredQuery] = Map.empty,
-                         dependencies: Map[(String, String), Int] = Map.empty, changes: Map[String, Int] = Map.empty) extends State
+                         dependencies: Map[(String, String), Int] = Map.empty, changes: Map[String, Long] = Map.empty) extends State
 
 case class CreatedAck(id: String) extends Ack
 case object SuccessAck extends  Ack
@@ -85,6 +85,11 @@ object StoredQueryAggregateRoot {
 
   implicit class StoredQueriesOps(state: StoredQueries) {
 
+    implicit class idGet(id: String) {
+      def ver: (String, Long) = id -> state.changes(id)
+      def ver(value: Long): (String, Long) = id -> (state.changes(id) + value)
+    }
+
     def rebuildDependencies(value: (String, Int, BoolClause)): Option[Map[(String, String), Int]] = {
       val (consumer, newClauseId, clause) = value
       clause match {
@@ -103,25 +108,27 @@ object StoredQueryAggregateRoot {
     }
 
     def cascadingUpdate(from: String): ItemsChanged = {
-      val zero = (state.items, List(from))
-      val (latestItems, changesList) = TopologicalSort.collectPaths(from)(TopologicalSort.toPredecessor(state.dependencies.keys)).flatten.foldLeft(zero) { (acc, link) =>
+
+      val paths = TopologicalSort.collectPaths(from)(TopologicalSort.toPredecessor(state.dependencies.keys))
+
+      val (latestItems, changes) = paths.flatten.foldLeft((state.items, Map(from.ver))) { (acc, path) =>
         val (repo, changes) = acc
-        val (provider: String, consumer: String) = link
-        val clauseId = state.dependencies(consumer, provider)
+        val (provider: String, consumer: String) = path
+        val clauseId = state.dependencies(consumer, provider) // invert path
         val updatedClause = clauseId -> repo(consumer).clauses(clauseId).asInstanceOf[NamedBoolClause].copy(clauses = repo(provider).clauses)
         val updatedItem = consumer -> repo(consumer).copy(clauses = repo(consumer).clauses + updatedClause)
-        (repo + updatedItem, consumer :: changes)
+
+        (repo + updatedItem, changes + consumer.ver)
       }
-      ItemsChanged(changesList.map { id => id -> latestItems(id).materialize(latestItems)}, changesList, state.dependencies)
+      ItemsChanged(changes.map { case (id, _) => id -> latestItems(id).materialize(latestItems) }.toSeq, changes, state.dependencies)
     }
 
     def update(event: Event): StoredQueries = {
-      def escalateVer(id: String) = id -> (state.changes.getOrElse(id, 0) + 1)
       event match {
         case ItemCreated(entity, dp) =>
-          state.copy(items = state.items + (entity.id -> entity), dependencies = dp, changes = state.changes + escalateVer(entity.id))
+          state.copy(items = state.items + (entity.id -> entity), dependencies = dp, changes = state.changes + (entity.id -> 1l))
         case ItemsChanged(xs, changesList, dp) =>
-          state.copy(items = state.items ++ xs, dependencies = dp, changes = state.changes ++ changesList.map(escalateVer))
+          state.copy(items = state.items ++ xs, dependencies = dp, changes = state.changes ++ changesList.map { case (k,ver) => k -> (ver + 1l) })
       }
     }
   }
@@ -150,14 +157,17 @@ class StoredQueryAggregateRoot extends PersistentActor with akka.actor.ActorLogg
 
   def afterPersisted(`sender`: ActorRef, evt: Event, custom: Option[Any]) = {
     state = state.update(evt)
-    custom.foreach { m => log.info(s"$m") }
+    custom.foreach { m => log.debug(s"$m") }
     `sender` ! custom.getOrElse(evt)
   }
 
   def doPersist(evt: Event, custom: Option[Any] = None) = persist(evt)(afterPersisted(sender(), _, custom))
 
   val receiveRecover: Receive = {
-    case evt: Event => state = state.update(evt)
+    case evt: Event => {
+      state = state.update(evt)
+      state.changes.foreach { case (k,v) => log.debug(s"id:$k version:$v ")}
+    }
     case SnapshotOffer(_, snapshot: StoredQueries) => state = snapshot
   }
 

@@ -34,7 +34,7 @@ class ExamplePersistentActor extends PersistentActor {
 
   val receiveCommand: Receive = {
     case Cmd(data) =>
-      persist(Evt(s"${data}-${numEvents}"))(updateState)
+      persist(Evt(s"$data-$numEvents"))(updateState)
     case "snap"  => saveSnapshot(state)
     case "print" => println(state)
   }

@@ -26,13 +26,14 @@ class StoredQueryAggregateRootView extends Actor  {
   def flatten(envelope: EventEnvelope) = {
     envelope.event match {
       case ItemCreated(entity, _) =>
-        entity :: Nil
-      case ItemsChanged(items, changes, _) => items.foldLeft(List.empty[StoredQuery]){ case (acc,(_,v)) => v :: acc }
+        (entity,0l) :: Nil
+      case ItemsChanged(items, changes, _) => items.foldLeft(List.empty[(StoredQuery, Long)]){ case (acc,(k,v)) => (v,changes(k)) :: acc }
       case _ => Nil
     }
   }
 
   def toBoolQuery(clauses: Iterable[BoolClause]): JValue = {
+
     import org.json4s._
     import org.json4s.native.JsonMethods._
     import org.json4s.JsonDSL._
@@ -59,13 +60,19 @@ class StoredQueryAggregateRootView extends Actor  {
   def receive: Receive = {
     case _ =>
 
+      //source.runForeach(println)
       source.mapConcat(flatten)
-            .runForeach(println)
-      source.mapConcat(flatten)
-            .map { s => toBoolQuery(s.clauses) }
-            .runForeach { event =>
+            .runForeach { case (event,ver) =>
               import org.json4s.native.JsonMethods._
-              println(pretty(render(event)))
+              import org.json4s.JsonDSL._
+
+              val percolator =
+                ("query" -> toBoolQuery(event.clauses)) ~
+                ("title" -> event.title) ~
+                ("tags" -> event.tags) ~
+                ("version" -> ver)
+
+              println(s"${event.id}\n${pretty(render(percolator))}")
             }
   }
 }
