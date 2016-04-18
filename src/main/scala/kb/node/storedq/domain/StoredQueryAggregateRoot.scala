@@ -45,6 +45,7 @@ object StoredQueryAggregateRoot {
 
   type Dependencies = Map[(String, String), Int]
 
+  type Changes = (Map[String, StoredQuery], Map[String, Long])
 
   //val path = clustering.Path("storedQueryAggregateRoot", "storedQueryAggregateRootProxy")
 
@@ -85,12 +86,7 @@ object StoredQueryAggregateRoot {
 
   implicit class StoredQueriesOps(state: StoredQueries) {
 
-    implicit class idGet(id: String) {
-      def ver: (String, Long) = id -> state.changes(id)
-      def ver(value: Long): (String, Long) = id -> (state.changes(id) + value)
-    }
-
-    def rebuildDependencies(value: (String, Int, BoolClause)): Option[Map[(String, String), Int]] = {
+    def tryBuildDependencies(value: (String, Int, BoolClause)): Option[Map[(String, String), Int]] = {
       val (consumer, newClauseId, clause) = value
       clause match {
         case NamedBoolClause(provider, _, _, _) => acyclicProofing((consumer, provider) -> newClauseId)
@@ -109,16 +105,17 @@ object StoredQueryAggregateRoot {
 
     def cascadingUpdate(from: String): ItemsChanged = {
 
-      val paths = TopologicalSort.collectPaths(from)(TopologicalSort.toPredecessor(state.dependencies.keys))
+      def withVer(id: String) = id -> state.changes(id)
 
-      val (latestItems, changes) = paths.flatten.foldLeft((state.items, Map(from.ver))) { (acc, path) =>
+      val paths = TopologicalSort.collectPaths(from)(TopologicalSort.toPredecessor(state.dependencies.keys))
+      val (latestItems, changes) = paths.flatten.foldLeft((state.items, Map(withVer(from)))) { (acc, path) =>
         val (repo, changes) = acc
         val (provider: String, consumer: String) = path
         val clauseId = state.dependencies(consumer, provider) // invert path
         val updatedClause = clauseId -> repo(consumer).clauses(clauseId).asInstanceOf[NamedBoolClause].copy(clauses = repo(provider).clauses)
         val updatedItem = consumer -> repo(consumer).copy(clauses = repo(consumer).clauses + updatedClause)
 
-        (repo + updatedItem, changes + consumer.ver)
+        (repo + updatedItem, changes + withVer(consumer))
       }
       ItemsChanged(changes.map { case (id, _) => id -> latestItems(id).materialize(latestItems) }.toSeq, changes, state.dependencies)
     }
@@ -189,8 +186,8 @@ class StoredQueryAggregateRoot extends PersistentActor with akka.actor.ActorLogg
         case None              => sender() ! "not found"
         case Some(storedQuery) =>
           val newClauseId = storedQuery.genClauseId()
-          state.rebuildDependencies((storedQueryId, newClauseId, clause)) match {
-            case None     => sender() ! "CycleInDirectedGraphError"
+          state.tryBuildDependencies((storedQueryId, newClauseId, clause)) match {
+            case None     => sender() ! "CycleInDirectedGraph"
             case Some(dp) => doPersist(storedQuery.addClause(newClauseId -> clause).merge(state.copy(dependencies = dp)).cascadingUpdate(storedQueryId), Some(CreatedAck(s"$newClauseId")))
           }
       }

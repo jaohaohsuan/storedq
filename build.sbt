@@ -27,8 +27,8 @@ lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging, DockerPlu
       "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.11",
       //"com.propensive" %% "rapture-json-circe" % "2.0.0-M5",
       "org.json4s" %% "json4s-native" % "3.3.0",
-
       "org.scalatra.scalate" %% "scalate-core" % "1.7.1",
+      "org.scalactic" %% "scalactic" % "2.2.6",
       "org.scalatest" %% "scalatest" % "2.2.6" % "test"
     )
   },

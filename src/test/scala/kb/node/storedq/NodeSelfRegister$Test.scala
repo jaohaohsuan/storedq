@@ -16,7 +16,7 @@ class NodeSelfRegister$Test extends FlatSpec with Matchers {
   "hostname" should "never use loop address" in {
     val config = ConfigFactory.load().register()
     val hostname = config.getString("akka.remote.netty.tcp.hostname")
-    hostname should not be empty
-    List("localhost", "127.0.0.1") should not contain hostname
+    info(s"hostname is '$hostname'")
+    List("", "127.0.0.1", "localhost") should not contain hostname
   }
 }
