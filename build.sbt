@@ -1,6 +1,13 @@
 import com.typesafe.sbt.packager.docker._
 import sbt.Keys._
 
+lazy val cleanUpLeveldb = taskKey[Unit]("Clean up Leveldb")
+
+cleanUpLeveldb := {
+  println("delete following leveldb files")
+  Process("rm -rfv target/journal").lines.foreach { s => println(s) }
+}
+
 lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging, DockerPlugin).settings(
   name := "storedq",
   version := "1.0.10",
@@ -25,11 +32,15 @@ lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging, DockerPlu
       "com.typesafe.akka" %% "akka-persistence" % akkaVersion,
       "com.typesafe.akka" %% "akka-persistence-query-experimental" % akkaVersion,
       "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.11",
+      "com.typesafe.akka" %% "akka-testkit" % akkaVersion % "test",
       //"com.propensive" %% "rapture-json-circe" % "2.0.0-M5",
       "org.json4s" %% "json4s-native" % "3.3.0",
       "org.scalatra.scalate" %% "scalate-core" % "1.7.1",
       "org.scalactic" %% "scalactic" % "2.2.6",
-      "org.scalatest" %% "scalatest" % "2.2.6" % "test"
+      "org.scalatest" %% "scalatest" % "2.2.6" % "test",
+      "org.iq80.leveldb" % "leveldb" % "0.7" % "test",
+      "org.fusesource.leveldbjni"   % "leveldbjni-all"   % "1.8" % "test",
+      "org.scalacheck" %% "scalacheck" % "1.13.0" % "test"
     )
   },
   dockerRepository := Some("127.0.0.1:5000/inu"),
@@ -66,5 +77,8 @@ lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging, DockerPlu
                               |
                               |format $PEER_DISCOVERY_SERVICE SEED_NODES
                               |format $AKKA_PERSISTENCE_SERVICE CASSANDRA_NODES
-                              |""".stripMargin
+                              |""".stripMargin,
+  testOptions in Test += Tests.Setup( () => println("Setup") ),
+  (test in Test) <<= (test in Test) dependsOn(cleanUpLeveldb)
+
 )

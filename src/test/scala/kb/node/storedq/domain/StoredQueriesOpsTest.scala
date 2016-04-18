@@ -1,8 +1,8 @@
 package kb.node.storedq.domain
 
+import kb.node.storedq.domain.StoredQueryAggregateRoot._
+import org.scalatest.PartialFunctionValues._
 import org.scalatest.{FlatSpec, Matchers, PartialFunctionValues}
-import PartialFunctionValues._
-import StoredQueryAggregateRoot._
 
 /**
   * Created by henry on 4/17/16.
@@ -28,8 +28,20 @@ class StoredQueriesOpsTest extends FlatSpec with Matchers {
 
   def addClause(state: StoredQueries)(consumer: StoredQuery, consumerId: String, clauseId: Int, clause: BoolClause) = {
     val paths = state.tryBuildDependencies(consumerId, clauseId, clause).get
+
+    clause match {
+      case NamedBoolClause(providerId, _, _ ,_) =>
+        paths should contain ((consumerId, providerId)-> clauseId)
+      case _ =>
+    }
+
     val newState = consumer.addClause(clauseId, clause).merge(state.copy(dependencies = paths))
-    (newState.cascadingUpdate(consumerId), newState)
+    val newEvent = newState.cascadingUpdate(consumerId)
+
+    assert(newEvent.items.size <= newState.items.size)
+    newEvent.changes.keys should contain theSameElementsAs newEvent.items.map(_._1)
+
+    (newEvent, newState)
   }
 
   "modify referenced storedQuery" should "have affect the consumers" in {
@@ -37,7 +49,6 @@ class StoredQueriesOpsTest extends FlatSpec with Matchers {
     val item1 = StoredQuery("2", "query1")
 
     val state0 = List(item0, item1).map(ItemCreated(_, Map.empty)).foldLeft(StoredQueries())( _ update _)
-
 
     val (event0, state1) = addClause(state0)(item0, "1", 1, NamedBoolClause("2", "query1", occur = "must"))
     event0.items should contain ("1" -> item0.addClause(1, NamedBoolClause("2", "query1", occur = "must")))

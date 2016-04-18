@@ -22,7 +22,7 @@ object Main extends App {
     system.actorOf(Props[ClusterMonitor], "cluster-monitor")
 
     system.actorOf(ClusterSingletonManager.props(
-        singletonProps = Props(classOf[domain.StoredQueryAggregateRoot]),
+        singletonProps = domain.StoredQueryAggregateRoot.props(),
         terminationMessage = PoisonPill,
         settings = ClusterSingletonManagerSettings(system)
     ), name = "storedQueryAggregateRoot")

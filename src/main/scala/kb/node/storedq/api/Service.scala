@@ -14,7 +14,7 @@ import scala.util.{Failure, Success}
 import scala.concurrent.ExecutionContextExecutor
 import scala.language.implicitConversions
 import scala.concurrent.duration._
-import kb.node.storedq.domain.{CreateStoredQuery, CreatedAck, AddClause, MatchBoolClause, BoolClause, RemoveClauses, SuccessAck, NamedBoolClause}
+import kb.node.storedq.domain.{CreateStoredQuery, AddClauseAck, CreateStoredQueryAck , AddClause, MatchBoolClause, BoolClause, RemoveClauses, SuccessAck, NamedBoolClause}
 
 /**
   * Created by henry on 4/13/16.
@@ -75,13 +75,13 @@ trait Service {
   lazy val aggRootProxy = system.actorSelection("/user/storedQueryAggregateRootProxy")
 
   def create(cmd: CreateStoredQuery): Route = onComplete(aggRootProxy ? cmd) {
-    case Success(CreatedAck(id)) => complete(Created, id)
+    case Success(CreateStoredQueryAck(id)) => complete(Created, id)
     case Success(unexpected) => complete(InternalServerError, s"$unexpected")
     case Failure(ex) => complete(InternalServerError)
   }
 
   def addClause(clause: BoolClause)(implicit storedQueryId: String): Route = onComplete(aggRootProxy ? AddClause(storedQueryId, clause)) {
-    case Success(CreatedAck(id)) => complete(Created, id)
+    case Success(AddClauseAck(id)) => complete(Created, id)
     case Success(unexpected) => complete(InternalServerError, s"$unexpected")
     case Failure(ex) => complete(InternalServerError)
   }
